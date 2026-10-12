@@ -1,0 +1,45 @@
+# Secrets and environment variables
+.env
+.env.*
+!.env.example
+**/.env
+**/.env.*
+!**/.env.example
+
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.venv/
+venv/
+
+# Local databases and runtime data
+*.db
+*.sqlite
+*.sqlite3
+data/uploads/
+data/*.db
+data/*.sqlite
+data/*.sqlite3
+
+# Node.js / Next.js
+node_modules/
+.next/
+out/
+dist/
+build/
+coverage/
+
+# Local configuration
+.DS_Store
+
+# Backups
+*.backup
+*.bak
+
+
+# Temporary backups
+*.backup
+*.backup.*
+*.before-*
+*.pre-*

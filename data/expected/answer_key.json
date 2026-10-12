@@ -1,0 +1,46 @@
+{
+  "dataset_version": "1.0",
+  "synthetic_data_only": true,
+  "cases": [
+    {
+      "case_id": "DON-100",
+      "expected": "exact_match",
+      "review_required": true
+    },
+    {
+      "case_id": "DON-101",
+      "expected": "fee_adjusted_settlement",
+      "review_required": true
+    },
+    {
+      "case_id": "DON-102",
+      "expected": "missing_bank_record",
+      "review_required": true
+    },
+    {
+      "case_id": "DON-103",
+      "expected": "donation_and_partial_refund",
+      "review_required": true
+    },
+    {
+      "case_id": "DON-104",
+      "expected": "duplicate_processor_record",
+      "review_required": true
+    },
+    {
+      "case_id": "DON-105",
+      "expected": "missing_bank_record",
+      "review_required": true
+    },
+    {
+      "case_id": "DON-106",
+      "expected": "amount_mismatch",
+      "review_required": true
+    },
+    {
+      "case_id": "DON-107",
+      "expected": "ambiguous_bank_candidate",
+      "review_required": true
+    }
+  ]
+}
