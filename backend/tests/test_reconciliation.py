@@ -200,3 +200,168 @@ def test_refund_with_currency_mismatch_is_not_classified_as_valid(
 
     assert item["classification"] != "donation_and_partial_refund"
     assert item["status"] == "pending_review"
+
+
+
+def test_ambiguous_bank_candidates_are_never_auto_approved():
+    result = run_demo()
+
+    ambiguous_items = [
+        item for item in result["items"]
+        if item["classification"] == "ambiguous_bank_candidate"
+    ]
+
+    assert len(ambiguous_items) == 2
+
+    for item in ambiguous_items:
+        assert item["status"] == "pending_review"
+        assert item["review_required"] is True
+        assert item["source_records"]["processor"] == []
+
+
+def test_every_reconciliation_item_requires_review():
+    result = run_demo()
+
+    for item in result["items"]:
+        assert item["status"] == "pending_review"
+        assert item["review_required"] is True
+
+
+def test_duplicate_processor_record_retains_source_evidence():
+    result = run_demo()
+
+    item = next(
+        item for item in result["items"]
+        if item["reference"] == "DON-104"
+    )
+
+    processor_records = item["source_records"]["processor"]
+
+    assert item["classification"] == "duplicate_processor_record"
+    assert len(processor_records) >= 2
+    assert all(
+        record["source"] == "processor"
+        and record["row_number"] >= 2
+        for record in processor_records
+    )
+
+
+def test_blank_processor_payment_reference_is_rejected(tmp_path):
+    import csv
+
+    processor_path = tmp_path / "processor.csv"
+
+    with (DATA_DIR / "processor.csv").open(
+        newline="", encoding="utf-8"
+    ) as original:
+        reader = csv.DictReader(original)
+        rows = list(reader)
+        fieldnames = reader.fieldnames
+
+    rows[0]["payment_reference"] = ""
+
+    with processor_path.open(
+        "w", newline="", encoding="utf-8"
+    ) as file:
+        writer = csv.DictWriter(file, fieldnames=fieldnames)
+        writer.writeheader()
+        writer.writerows(rows)
+
+    from app.reconciliation import ReconciliationError
+
+    try:
+        reconcile(
+            processor_path,
+            DATA_DIR / "bank.csv",
+            DATA_DIR / "ledger.csv",
+        )
+    except ReconciliationError as exc:
+        assert "payment_reference" in str(exc)
+    else:
+        raise AssertionError(
+            "Expected a blank processor payment reference to be rejected"
+        )
+
+
+def test_invalid_processor_amount_is_rejected(tmp_path):
+    import csv
+
+    from app.reconciliation import ReconciliationError
+
+    processor_path = tmp_path / "processor.csv"
+
+    with (DATA_DIR / "processor.csv").open(
+        newline="", encoding="utf-8"
+    ) as original:
+        reader = csv.DictReader(original)
+        rows = list(reader)
+        fieldnames = reader.fieldnames
+
+    rows[0]["gross_amount"] = "abc"
+
+    with processor_path.open(
+        "w", newline="", encoding="utf-8"
+    ) as file:
+        writer = csv.DictWriter(file, fieldnames=fieldnames)
+        writer.writeheader()
+        writer.writerows(rows)
+
+    try:
+        reconcile(
+            processor_path,
+            DATA_DIR / "bank.csv",
+            DATA_DIR / "ledger.csv",
+        )
+    except ReconciliationError as exc:
+        assert "gross_amount" in str(exc)
+        assert "abc" in str(exc)
+    else:
+        raise AssertionError(
+            "Expected invalid processor amount to be rejected"
+        )
+
+
+def test_missing_required_processor_column_is_rejected(tmp_path):
+    import csv
+
+    from app.reconciliation import ReconciliationError
+
+    processor_path = tmp_path / "processor.csv"
+
+    with (DATA_DIR / "processor.csv").open(
+        newline="", encoding="utf-8"
+    ) as original:
+        reader = csv.DictReader(original)
+        fieldnames = [
+            field for field in reader.fieldnames
+            if field != "gross_amount"
+        ]
+        rows = list(reader)
+
+    with processor_path.open(
+        "w", newline="", encoding="utf-8"
+    ) as file:
+        writer = csv.DictWriter(file, fieldnames=fieldnames)
+        writer.writeheader()
+        writer.writerows(
+            {
+                key: value
+                for key, value in row.items()
+                if key in fieldnames
+            }
+            for row in rows
+        )
+
+    try:
+        reconcile(
+            processor_path,
+            DATA_DIR / "bank.csv",
+            DATA_DIR / "ledger.csv",
+        )
+    except ReconciliationError as exc:
+        assert "gross_amount" in str(exc)
+        assert "missing columns" in str(exc)
+    else:
+        raise AssertionError(
+            "Expected missing processor column to be rejected"
+        )

@@ -453,3 +453,28 @@ button:disabled {
 :root[data-theme="dark"] #main-content .text-teal-800 {
   color: #b8f7e2 !important;
 }
+
+/* Review queue selection: accessible in both themes */
+.review-queue-item {
+  border-left: 3px solid transparent;
+}
+
+.review-queue-item-selected {
+  background-color: #e6f5ef !important;
+  border-left-color: #087f5b;
+  color: #123d32;
+}
+
+.review-queue-item-selected:hover {
+  background-color: #d9eee6 !important;
+}
+
+:root[data-theme="dark"] .review-queue-item-selected {
+  background-color: #193d35 !important;
+  border-left-color: #6ee7b7;
+  color: #eaf5f2;
+}
+
+:root[data-theme="dark"] .review-queue-item-selected:hover {
+  background-color: #234b40 !important;
+}

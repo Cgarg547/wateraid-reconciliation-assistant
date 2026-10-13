@@ -65,6 +65,19 @@ def load_csv(path: str | Path, source: str) -> list[dict]:
 
         return rows
 
+def validate_nonempty_fields(
+    rows: list[dict],
+    fields: list[str],
+    source: str,
+) -> None:
+    """Reject records with missing identifiers or required text fields."""
+    for row in rows:
+        for field in fields:
+            if not row.get(field, "").strip():
+                raise ReconciliationError(
+                    f"{source}: missing required value in {field} "
+                    f"at row {row['_row_number']}."
+                )
 
 def money(value: str, field: str) -> Decimal:
     try:
@@ -95,6 +108,40 @@ def reconcile(
     processor = load_csv(processor_path, "processor")
     bank = load_csv(bank_path, "bank")
     ledger = load_csv(ledger_path, "ledger")
+
+
+    validate_nonempty_fields(
+        processor,
+        [
+            "transaction_id",
+            "payment_reference",
+            "currency",
+            "settlement_date",
+            "entry_type",
+        ],
+        "processor",
+    )
+    validate_nonempty_fields(
+        bank,
+        [
+            "bank_reference",
+            "currency",
+            "transaction_date",
+        ],
+        "bank",
+    )
+    validate_nonempty_fields(
+        ledger,
+        [
+            "journal_reference",
+            "donation_reference",
+            "currency",
+            "posting_date",
+            "entry_type",
+        ],
+        "ledger",
+    )
+
 
     # Validate monetary fields before matching.
     for row in processor:
@@ -489,6 +536,23 @@ def reconcile(
             50 if candidates else 0,
         )
 
+    processor_gross_total = sum(
+        (row["_gross"] for row in processor),
+        Decimal("0.00"),
+    )
+    processor_fee_total = sum(
+        (row["_fee"] for row in processor),
+        Decimal("0.00"),
+    )
+    bank_deposit_total = sum(
+        (row["_amount"] for row in bank),
+        Decimal("0.00"),
+    )
+    ledger_recorded_total = sum(
+        (row["_amount"] for row in ledger),
+        Decimal("0.00"),
+    )
+
     return {
         "summary": {
             "processor_records": len(processor),
@@ -496,6 +560,11 @@ def reconcile(
             "ledger_records": len(ledger),
             "reconciliation_items": len(results),
             "items_pending_review": len(results),
+            "processor_gross_total": str(processor_gross_total),
+            "processor_fee_total": str(processor_fee_total),
+            "bank_deposit_total": str(bank_deposit_total),
+            "ledger_recorded_total": str(ledger_recorded_total),
+
         },
         "items": results,
         "notice": (
