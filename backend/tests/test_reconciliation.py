@@ -365,3 +365,37 @@ def test_missing_required_processor_column_is_rejected(tmp_path):
         raise AssertionError(
             "Expected missing processor column to be rejected"
         )
+
+def test_every_item_has_explicit_review_priority():
+    result = run_demo()
+
+    assert result["items"]
+    assert all(
+        item.get("review_priority") in {"high", "medium", "low"}
+        for item in result["items"]
+    )
+
+def test_high_risk_exceptions_are_prioritized():
+    result = run_demo()
+
+    high_priority = [
+        item for item in result["items"]
+        if item.get("review_priority") == "high"
+    ]
+
+    high_priority_classifications = {
+        item["classification"] for item in high_priority
+    }
+
+    assert "amount_mismatch" in high_priority_classifications
+    assert "duplicate_processor_record" in high_priority_classifications
+    assert "ambiguous_bank_candidate" in high_priority_classifications
+
+def test_confidence_never_automatically_approves_items():
+    result = run_demo()
+
+    assert all(
+        item["status"] == "pending_review"
+        and item["review_required"] is True
+        for item in result["items"]
+    )

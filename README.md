@@ -20,6 +20,7 @@ The WaterAid Donation Reconciliation Assistant helps finance and operations team
 - [AI Investigation Assistant](#ai-investigation-assistant)
 - [Human Review and Auditability](#human-review-and-auditability)
 - [Sample Data](#sample-data)
+- [Project Documentation](#project-documentation)
 - [Limitations and Future Improvements](#limitations-and-future-improvements)
 - [Responsible Use](#responsible-use)
 
@@ -263,7 +264,7 @@ python -m pytest -q tests
 
 The test suite covers reconciliation logic, review storage, and AI explanation behavior.
 
-**Last verified result:** 31 backend tests passed. The latest run completed successfully in 0.44 seconds.
+**Latest verified result:** 48 backend tests passed in 0.68 seconds, including reconciliation, review storage and API validation, staff-effort calculations, and financial-impact checks.
 
 ### Frontend production build
 
@@ -348,6 +349,15 @@ The sample records demonstrate scenarios such as:
 - Ambiguous or unreferenced bank entries
 
 Use the included synthetic files for testing and demonstrations. Do not upload confidential donor information or real financial records to this prototype.
+
+## Project Documentation
+
+The following documents explain the prototype's architecture, operation, evaluation, and financial assumptions.
+
+- [Architecture and Data Flow](docs/architecture-and-data-flow.md) — system components, data flow, and review controls.
+- [Setup and Operating Guide](docs/setup-and-operating-guide.md) — instructions for running and demonstrating the prototype.
+- [Cost Model](docs/cost-model.md) — illustrative staff-effort, operating-cost, and break-even assumptions.
+- [Example Reconciliation Summary](docs/example-reconciliation-summary.md) — synthetic findings, exceptions, and required reviewer actions.
 
 ## Limitations and Future Improvements
 
