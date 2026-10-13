@@ -85,6 +85,32 @@ function Badge({ children }: { children: React.ReactNode }) {
   );
 }
 
+function getRecordValue(
+  records: SourceRecord[],
+  field: string,
+): string | null {
+  const value = records[0]?.record[field];
+  return value == null || value.trim() === "" ? null : value.trim();
+}
+
+function parseMoney(value: string | null): number | null {
+  if (value == null || !/^-?\d+(?:\.\d{1,2})?$/.test(value)) {
+    return null;
+  }
+
+  const amount = Number(value);
+  return Number.isFinite(amount) ? amount : null;
+}
+
+function formatMoney(amount: number | null, currency: string | null): string {
+  if (amount == null) return "Not available";
+
+  return `${currency ? `${currency} ` : ""}${amount.toLocaleString("en-CA", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  })}`;
+}
+
 function RecordGroup({
   title,
   records,
@@ -94,7 +120,7 @@ function RecordGroup({
 }) {
   return (
     <section className="rounded-xl border border-slate-200 bg-white p-4">
-      <div className="mb-3 flex items-center justify-between">
+      <div className="mb-3 flex items-center justify-between gap-2">
         <h4 className="font-semibold capitalize text-slate-900">{title}</h4>
         <span className="text-xs text-slate-500">
           {records.length} record{records.length === 1 ? "" : "s"}
@@ -108,26 +134,37 @@ function RecordGroup({
           {records.map((item, index) => (
             <div
               key={`${item.source}-${item.row_number}-${index}`}
-              className="rounded-lg bg-slate-50 p-3"
+              className="rounded-lg border border-slate-200 bg-slate-50 p-3"
             >
-              <p className="mb-2 text-xs text-slate-500">
+              <p className="mb-3 text-xs font-medium text-slate-500">
                 Source row {item.row_number}
               </p>
 
               <dl className="space-y-2">
-                {Object.entries(item.record).map(([key, value]) => (
-                  <div
-                    key={key}
-                    className="grid grid-cols-2 gap-2 text-sm"
-                  >
-                    <dt className="capitalize text-slate-500">
-                      {formatLabel(key)}
-                    </dt>
-                    <dd className="break-words text-right font-medium text-slate-800">
-                      {value || "—"}
-                    </dd>
-                  </div>
-                ))}
+                {Object.entries(item.record).map(([key, value]) => {
+                  const isAmount =
+                    /amount|total|gross|net|fee|deposit|balance/i.test(key);
+
+                  return (
+                    <div
+                      key={key}
+                      className={`grid grid-cols-2 gap-2 rounded-md text-sm ${
+                        isAmount ? "border border-teal-200 bg-teal-50 px-2 py-2" : ""
+                      }`}
+                    >
+                      <dt className="capitalize text-slate-500">
+                        {formatLabel(key)}
+                      </dt>
+                      <dd
+                        className={`break-words text-right font-semibold ${
+                          isAmount ? "text-teal-900" : "text-slate-800"
+                        }`}
+                      >
+                        {value || "—"}
+                      </dd>
+                    </div>
+                  );
+                })}
               </dl>
             </div>
           ))}
@@ -140,6 +177,29 @@ function RecordGroup({
 export default function Home() {
   const [data, setData] = useState<ApiResult | null>(null);
   const [runId, setRunId] = useState("demo");
+
+  const [theme, setTheme] = useState<"light" | "dark">("light");
+
+  useEffect(() => {
+    const savedTheme = window.localStorage.getItem("wateraid-theme");
+    const initialTheme =
+      savedTheme === "light" || savedTheme === "dark"
+        ? savedTheme
+        : window.matchMedia("(prefers-color-scheme: dark)").matches
+          ? "dark"
+          : "light";
+
+    setTheme(initialTheme);
+    document.documentElement.dataset.theme = initialTheme;
+  }, []);
+
+  function toggleTheme() {
+    const nextTheme = theme === "light" ? "dark" : "light";
+
+    setTheme(nextTheme);
+    document.documentElement.dataset.theme = nextTheme;
+    window.localStorage.setItem("wateraid-theme", nextTheme);
+  }
 
   const [processorFile, setProcessorFile] = useState<File | null>(null);
   const [bankFile, setBankFile] = useState<File | null>(null);
@@ -558,7 +618,10 @@ const pendingCount = data
   }
 
   return (
-    <main className="min-h-screen bg-slate-50 text-slate-900">
+    <main id="main-content" className="app-shell min-h-screen bg-slate-50 text-slate-900">
+      <a className="skip-link" href="#dashboard-content">
+        Skip to main content
+      </a>
       <header className="border-b border-slate-200 bg-white">
         <div className="mx-auto flex max-w-[1500px] flex-wrap items-center justify-between gap-4 px-5 py-5 lg:px-8">
           <div className="flex items-center gap-3">
@@ -582,6 +645,16 @@ const pendingCount = data
             </span>
 
             <button
+              type="button"
+              onClick={toggleTheme}
+              aria-label={`Switch to ${theme === "light" ? "dark" : "light"} mode`}
+              aria-pressed={theme === "dark"}
+              className="rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
+            >
+              {theme === "light" ? "◐ Dark mode" : "☀ Light mode"}
+            </button>
+
+            <button
               onClick={() => void loadData()}
               disabled={loading || saving || uploading}
               className="rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-medium hover:bg-slate-50 disabled:opacity-50"
@@ -600,7 +673,43 @@ const pendingCount = data
         </div>
       </header>
 
-      <div className="mx-auto max-w-[1500px] space-y-7 px-5 py-8 lg:px-8">
+      <div id="dashboard-content" className="mx-auto max-w-[1500px] space-y-7 px-5 py-8 lg:px-8">
+        <section className="relative isolate overflow-hidden rounded-3xl border border-teal-900/10 bg-gradient-to-br from-teal-950 via-teal-800 to-emerald-700 p-6 text-white shadow-xl sm:p-9 lg:p-10">
+          <div className="pointer-events-none absolute -right-16 -top-20 h-72 w-72 rounded-full bg-emerald-300/15 blur-3xl" aria-hidden="true" />
+          <div className="pointer-events-none absolute -bottom-24 right-1/4 h-56 w-56 rounded-full bg-cyan-300/10 blur-3xl" aria-hidden="true" />
+
+          <div className="relative grid items-center gap-8 md:grid-cols-[minmax(0,1fr)_200px]">
+            <div className="max-w-3xl">
+              <p className="mb-4 inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.18em] text-emerald-100">
+                <span className="h-2 w-2 rounded-full bg-emerald-300" aria-hidden="true" />
+                Donation integrity workspace
+              </p>
+
+              <h2 className="max-w-2xl text-3xl font-bold leading-tight tracking-tight sm:text-4xl lg:text-5xl">
+                Every donation deserves to be accounted for.
+              </h2>
+
+              <p className="mt-4 max-w-2xl text-sm leading-7 text-teal-50 sm:text-base">
+                Bring processor, bank, and ledger records together. Investigate
+                discrepancies, review evidence, and document decisions with a
+                traceable human-led workflow.
+              </p>
+
+              <div className="mt-6 flex flex-wrap items-center gap-3 text-sm text-teal-50">
+                <span className="rounded-full border border-white/20 bg-white/10 px-3 py-1.5">Evidence-led review</span>
+                <span className="rounded-full border border-white/20 bg-white/10 px-3 py-1.5">Human oversight</span>
+                <span className="rounded-full border border-white/20 bg-white/10 px-3 py-1.5">Auditable decisions</span>
+              </div>
+            </div>
+
+            <div className="orb-stage relative mx-auto hidden h-48 w-48 md:flex" aria-hidden="true">
+              <div className="orb-ring" />
+              <div className="orb-ring orb-ring-two" />
+              <div className="water-orb" />
+            </div>
+          </div>
+        </section>
+
         <section className="flex flex-wrap items-end justify-between gap-4">
           <div>
             <p className="mb-2 text-xs font-semibold uppercase tracking-[0.2em] text-teal-800">
@@ -933,6 +1042,136 @@ const pendingCount = data
 
                     </section>
 
+                    {(() => {
+                      const processorRecords = current.source_records.processor;
+                      const bankRecords = current.source_records.bank;
+                      const ledgerRecords = current.source_records.ledger;
+
+                      const gross = parseMoney(getRecordValue(processorRecords, "gross_amount"));
+                      const fee = parseMoney(getRecordValue(processorRecords, "fee"));
+                      const deposit = parseMoney(getRecordValue(bankRecords, "deposit_amount"));
+                      const ledgerAmount = parseMoney(getRecordValue(ledgerRecords, "recorded_amount"));
+
+                      const currency =
+                        getRecordValue(processorRecords, "currency") ??
+                        getRecordValue(bankRecords, "currency") ??
+                        getRecordValue(ledgerRecords, "currency");
+
+                      const expectedNet =
+                        gross !== null && fee !== null ? gross - fee : null;
+
+                      const depositDifference =
+                        deposit !== null && expectedNet !== null
+                          ? Math.round((deposit - expectedNet) * 100) / 100
+                          : null;
+
+                      const hasAllRecords =
+                        processorRecords.length > 0 &&
+                        bankRecords.length > 0 &&
+                        ledgerRecords.length > 0;
+
+                      const currencyValues = [
+                        getRecordValue(processorRecords, "currency"),
+                        getRecordValue(bankRecords, "currency"),
+                        getRecordValue(ledgerRecords, "currency"),
+                      ].filter((value): value is string => value !== null);
+
+                      const currencyMismatch =
+                        new Set(currencyValues).size > 1;
+
+                      const amountMismatch =
+                        gross !== null &&
+                        ledgerAmount !== null &&
+                        Math.round(gross * 100) !== Math.round(ledgerAmount * 100);
+
+                      const settlementMismatch =
+                        depositDifference !== null &&
+                        Math.abs(depositDifference) >= 0.01;
+
+                      const classificationLabels: Record<string, string> = {
+                        exact_amount_match: "Exact amount match",
+                        fee_adjusted_settlement: "Fee-adjusted settlement",
+                        amount_mismatch: "Amount mismatch",
+                        currency_mismatch: "Currency mismatch",
+                        missing_bank_record: "Missing bank record",
+                        missing_processor_record: "Missing processor record",
+                        missing_ledger_record: "Missing ledger record",
+                        ambiguous_bank_candidate: "Ambiguous bank candidate",
+                        unreferenced_bank_record: "Unreferenced bank record",
+                      };
+
+                      const summaryStatus = !hasAllRecords
+                        ? "Missing source record"
+                        : classificationLabels[current.classification] ??
+                          current.classification
+                            .replaceAll("_", " ")
+                            .replace(/^./, (character) => character.toUpperCase());
+
+                      const summaryStatusStyle =
+                        summaryStatus === "Amounts aligned" ||
+                        summaryStatus === "Fee-adjusted settlement"
+                          ? "border-emerald-200 bg-emerald-50 text-emerald-800"
+                          : "border-amber-200 bg-amber-50 text-amber-900";
+
+                      const metrics = [
+                        { label: "Processor gross", amount: gross },
+                        { label: "Processor fee", amount: fee },
+                        { label: "Expected net", amount: expectedNet },
+                        { label: "Bank deposit", amount: deposit },
+                        { label: "Ledger recorded", amount: ledgerAmount },
+                        { label: "Deposit difference", amount: depositDifference },
+                      ];
+
+                      return (
+                        <section
+                          aria-label="Reconciliation summary"
+                          className="mb-4 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm"
+                        >
+                          <div className="flex flex-wrap items-start justify-between gap-3">
+                            <div>
+                              <h3 className="text-lg font-bold text-slate-900">
+                                Reconciliation summary
+                              </h3>
+                              <p className="mt-1 text-sm text-slate-500">
+                                Financial overview calculated from the selected source records.
+                              </p>
+                            </div>
+                            <span className={`rounded-full border px-3 py-1.5 text-xs font-semibold ${summaryStatusStyle}`}>
+                              {summaryStatus}
+                            </span>
+                          </div>
+
+                          <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+                            {metrics.map((metric) => (
+                              <div
+                                key={metric.label}
+                                className={`rounded-xl border p-4 ${
+                                  metric.label === "Deposit difference" &&
+                                  depositDifference !== null &&
+                                  Math.abs(depositDifference) >= 0.01
+                                    ? "border-amber-200 bg-amber-50"
+                                    : "border-slate-200 bg-slate-50"
+                                }`}
+                              >
+                                <p className="text-sm text-slate-500">{metric.label}</p>
+                                <p className="mt-2 break-words text-xl font-bold text-slate-900">
+                                  {formatMoney(metric.amount, currency)}
+                                </p>
+                              </div>
+                            ))}
+                          </div>
+
+                          <p className="mt-4 text-xs leading-5 text-slate-500">
+                            Expected net is processor gross minus the recorded fee.
+                            Deposit difference is bank deposit minus expected net.
+                            A difference signals a case for review; it is not by itself
+                            proof of an accounting error. Classification and source evidence
+                            remain available below.
+                          </p>
+                        </section>
+                      );
+                    })()}
+
                     <div className="grid gap-4 lg:grid-cols-3">
                       <RecordGroup
                         title="Processor"
@@ -1092,40 +1331,83 @@ const pendingCount = data
                     </section>
 
                     <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-                      <h3 className="text-lg font-bold">Audit history</h3>
-                      <p className="mt-1 text-sm text-slate-500">
-                        Saved review events for this reconciliation item.
-                      </p>
+                      <div className="flex flex-wrap items-start justify-between gap-3">
+                        <div>
+                          <h3 className="text-lg font-bold text-slate-900">Audit history</h3>
+                          <p className="mt-1 text-sm text-slate-500">
+                            A traceable record of review decisions for this case.
+                          </p>
+                        </div>
+                        <span className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-semibold text-slate-600">
+                          {currentHistory.length} event{currentHistory.length === 1 ? "" : "s"}
+                        </span>
+                      </div>
 
                       {currentHistory.length === 0 ? (
-                        <p className="mt-4 text-sm text-slate-500">
-                          No review events recorded for this case.
-                        </p>
-                      ) : (
-                        <div className="mt-4 space-y-3">
-                          {currentHistory.map((event) => (
-                            <div
-                              key={event.id}
-                              className="rounded-lg border border-slate-200 p-3"
-                            >
-                              <div className="flex flex-wrap items-center justify-between gap-2">
-                                <Badge>
-                                  {formatLabel(event.decision)}
-                                </Badge>
-                                <span className="text-xs text-slate-500">
-                                  {event.created_at}
-                                </span>
-                              </div>
-
-                              <p className="mt-2 text-sm font-medium">
-                                {event.reviewer_id}
-                              </p>
-                              <p className="mt-1 text-sm text-slate-600">
-                                {event.rationale}
-                              </p>
-                            </div>
-                          ))}
+                        <div className="mt-4 rounded-xl border border-dashed border-slate-300 bg-slate-50 p-5 text-center">
+                          <p className="text-sm font-medium text-slate-700">
+                            No review events recorded yet
+                          </p>
+                          <p className="mt-1 text-xs leading-5 text-slate-500">
+                            Saved decisions will appear here with the reviewer, timestamp, and rationale.
+                          </p>
                         </div>
+                      ) : (
+                        <ol className="mt-5 space-y-4">
+                          {currentHistory.map((event, index) => {
+                            const decisionStyle =
+                              event.decision === "approved"
+                                ? "border-emerald-200 bg-emerald-50 text-emerald-800"
+                                : event.decision === "rejected"
+                                  ? "border-rose-200 bg-rose-50 text-rose-800"
+                                  : "border-amber-200 bg-amber-50 text-amber-900";
+
+                            return (
+                              <li key={event.id} className="relative pl-7">
+                                {index < currentHistory.length - 1 && (
+                                  <span
+                                    className="absolute bottom-[-18px] left-[9px] top-5 w-px bg-slate-200"
+                                    aria-hidden="true"
+                                  />
+                                )}
+
+                                <span
+                                  className="absolute left-0 top-1.5 h-[19px] w-[19px] rounded-full border-4 border-white bg-teal-700 shadow-sm"
+                                  aria-hidden="true"
+                                />
+
+                                <div className="rounded-xl border border-slate-200 bg-white p-4">
+                                  <div className="flex flex-wrap items-center justify-between gap-2">
+                                    <span className={`inline-flex rounded-full border px-2.5 py-1 text-xs font-semibold ${decisionStyle}`}>
+                                      {formatLabel(event.decision)}
+                                    </span>
+                                    <time className="text-xs text-slate-500">
+                                      {event.created_at}
+                                    </time>
+                                  </div>
+
+                                  <div className="mt-3">
+                                    <p className="text-xs font-medium uppercase tracking-wide text-slate-500">
+                                      Reviewer
+                                    </p>
+                                    <p className="mt-1 text-sm font-semibold text-slate-900">
+                                      {event.reviewer_id}
+                                    </p>
+                                  </div>
+
+                                  <div className="mt-3 rounded-lg bg-slate-50 p-3">
+                                    <p className="text-xs font-medium uppercase tracking-wide text-slate-500">
+                                      Rationale
+                                    </p>
+                                    <p className="mt-1 whitespace-pre-wrap break-words text-sm leading-6 text-slate-700">
+                                      {event.rationale || "No rationale provided."}
+                                    </p>
+                                  </div>
+                                </div>
+                              </li>
+                            );
+                          })}
+                        </ol>
                       )}
                     </section>
                   </>
