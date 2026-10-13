@@ -1,0 +1,11 @@
+transaction_id,payment_reference,gross_amount,fee,currency,settlement_date,entry_type,original_transaction_id
+TX100,DON-100,100.00,0.00,CAD,2026-10-01,payment,
+TX101,DON-101,50.00,1.50,CAD,2026-10-02,payment,
+TX102,DON-102,75.00,0.00,CAD,2026-10-03,payment,
+TX103,DON-103,80.00,0.00,CAD,2026-10-04,payment,
+TX103-R1,DON-103,-20.00,0.00,CAD,2026-10-05,refund,TX103
+TX104,DON-104,40.00,0.00,CAD,2026-10-06,payment,
+TX104,DON-104,40.00,0.00,CAD,2026-10-06,payment,
+TX105,DON-105,60.00,0.00,CAD,2026-10-07,payment,
+TX106,DON-106,40.00,0.00,CAD,2026-10-08,payment,
+TX107,DON-107,25.00,0.00,CAD,2026-10-09,payment,

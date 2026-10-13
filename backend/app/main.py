@@ -210,6 +210,8 @@ def health():
 @app.get("/api/demo-reconciliation")
 def demo_reconciliation():
     data_dir = PROJECT_ROOT / "data" / "synthetic"
+    if not data_dir.exists():
+        data_dir = BACKEND_ROOT / "data" / "synthetic"
 
     try:
         return reconcile(
@@ -283,6 +285,8 @@ def save_demo_review(
         )
 
     data_dir = PROJECT_ROOT / "data" / "synthetic"
+    if not data_dir.exists():
+        data_dir = BACKEND_ROOT / "data" / "synthetic"
 
     try:
         result = reconcile(
