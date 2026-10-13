@@ -263,7 +263,7 @@ python -m pytest -q tests
 
 The test suite covers reconciliation logic, review storage, and AI explanation behavior.
 
-**Last verified result:** 22 tests passed.
+**Last verified result:** 31 backend tests passed. The latest run completed successfully in 0.44 seconds.
 
 ### Frontend production build
 
@@ -277,6 +277,27 @@ npm run build
 **Last verified result:** The production build and TypeScript checks completed successfully.
 
 Test results describe the last verified development state and should be reproduced against the version being submitted.
+
+
+### Financial integrity and reconciliation evaluation
+
+Run these commands from the project root with the project's Python environment activated:
+
+```bash
+python scripts/check_financial_integrity.py
+python scripts/evaluate_reconciliation.py
+```
+
+The financial integrity check validates the expected record counts and source totals across the synthetic processor, bank, and ledger files.
+
+The reconciliation evaluation compares the engine's classifications with the predefined synthetic answer key and checks review requirements and ambiguous bank exceptions.
+
+**Latest verified results:**
+- Financial integrity: 7/7 checks passed.
+- Synthetic reconciliation evaluation: 8/8 expected cases passed.
+- Actual reconciliation items: 10, including two unreferenced bank exceptions.
+
+These results apply only to the included synthetic dataset. They do not establish accuracy on unseen transactions or production financial data.
 
 ## AI Investigation Assistant
 

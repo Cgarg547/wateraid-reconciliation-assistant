@@ -37,10 +37,16 @@
       "expected": "amount_mismatch",
       "review_required": true
     },
-    {
-      "case_id": "DON-107",
-      "expected": "ambiguous_bank_candidate",
-      "review_required": true
-    }
+{
+  "case_id": "DON-107",
+  "expected": "missing_bank_record",
+  "review_required": true,
+  "related_exceptions": {
+    "classification": "ambiguous_bank_candidate",
+    "count": 2,
+    "review_required": true,
+    "auto_match_allowed": false
+  }
+}
   ]
 }
