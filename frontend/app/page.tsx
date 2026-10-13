@@ -22,6 +22,7 @@ type ReconciliationItem = {
     bank: SourceRecord[];
     ledger: SourceRecord[];
   };
+  review_priority: "high" | "medium" | "low";
 };
 
 type ApiResult = {
@@ -183,6 +184,8 @@ function getIntelligenceMetrics(
     [
       "amount_mismatch",
       "currency_mismatch",
+      "duplicate_processor_record",
+      "ambiguous_multiple_records",
       "missing_bank_record",
       "missing_processor_record",
       "missing_ledger_record",
@@ -510,6 +513,16 @@ export default function Home() {
           item.classification === classificationFilter;
 
         return matchesQuery && matchesStatus && matchesClassification;
+      })
+      .sort((a, b) => {
+        const priorityRank = { high: 0, medium: 1, low: 2 };
+        const priorityDifference =
+          priorityRank[a.item.review_priority] -
+          priorityRank[b.item.review_priority];
+
+        return priorityDifference !== 0
+          ? priorityDifference
+          : a.index - b.index;
       });
   }, [data, query, filter, classificationFilter, decisions]);
 
@@ -1338,9 +1351,21 @@ const pendingCount = data
                             <p className="font-semibold">
                               {item.reference || "Unreferenced bank entry"}
                             </p>
-                            <p className="mt-1 text-sm capitalize text-slate-500">
-                              {formatLabel(item.classification)}
-                            </p>
+<p className="mt-1 text-sm capitalize text-slate-500">
+  {formatLabel(item.classification)}
+</p>
+
+<span
+  className={`mt-2 inline-flex rounded-full px-2 py-1 text-xs font-semibold uppercase tracking-wide ${
+    item.review_priority === "high"
+      ? "bg-rose-100 text-rose-800"
+      : item.review_priority === "medium"
+        ? "bg-amber-100 text-amber-800"
+        : "bg-slate-100 text-slate-700"
+  }`}
+>
+  {item.review_priority} priority
+</span>
                           </div>
 
                           <span

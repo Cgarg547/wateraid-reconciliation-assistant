@@ -38,6 +38,31 @@ REQUIRED_COLUMNS = {
     },
 }
 
+def get_review_priority(classification: str) -> str:
+    """Assign investigation priority without implying match certainty."""
+    high_priority = {
+        "amount_mismatch",
+        "currency_mismatch",
+        "duplicate_processor_record",
+        "ambiguous_multiple_records",
+        "ambiguous_bank_candidate",
+    }
+
+    medium_priority = {
+        "missing_bank_record",
+        "missing_processor_record",
+        "missing_ledger_record",
+        "unreferenced_bank_record",
+    }
+
+    if classification in high_priority:
+        return "high"
+
+    if classification in medium_priority:
+        return "medium"
+
+    return "low"
+
 
 def load_csv(path: str | Path, source: str) -> list[dict]:
     """Load a CSV and preserve its original row numbers."""
@@ -203,6 +228,7 @@ def reconcile(
         results.append({
             "reference": reference or None,
             "classification": classification,
+            "review_priority": get_review_priority(classification),
             "status": "pending_review",
             "review_required": True,
             "confidence_score": score,
