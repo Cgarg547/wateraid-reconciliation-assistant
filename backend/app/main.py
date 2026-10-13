@@ -29,7 +29,7 @@ MAX_FILE_SIZE = 5 * 1024 * 1024
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 BACKEND_ROOT = Path(__file__).resolve().parents[1]
 load_dotenv(BACKEND_ROOT / ".env")
-UPLOAD_ROOT = PROJECT_ROOT / "data" / "uploads"
+UPLOAD_ROOT = Path(os.getenv("UPLOAD_ROOT", str(PROJECT_ROOT / "data" / "uploads")))
 
 
 class ReviewRequest(BaseModel):
@@ -44,14 +44,20 @@ app = FastAPI(
     version="0.3.0",
 )
 
+cors_origins = [
+    origin.strip().rstrip("/")
+    for origin in os.getenv(
+        "CORS_ORIGINS",
+        "http://localhost:3000,http://127.0.0.1:3000",
+    ).split(",")
+    if origin.strip()
+]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "http://localhost:3000",
-        "http://127.0.0.1:3000",
-    ],
+    allow_origins=cors_origins,
     allow_credentials=False,
-    allow_methods=["GET", "POST"],
+    allow_methods=["GET", "POST", "OPTIONS"],
     allow_headers=["*"],
 )
 
